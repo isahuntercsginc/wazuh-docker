@@ -1,0 +1,47 @@
+name: Trigger auto deployment for csginc-eus2-wazuh-mulitnode
+
+# When this action will be executed
+on:
+  # Automatically trigger it when detected changes in repo
+  push:
+    branches: 
+      [ master ]
+    paths:
+    - 'build-docker-images/wazuh-manager/**'
+    - '.github/workflows/csginc-eus2-wazuh-mulitnode-AutoDeployTrigger-ad56fc6f-19b8-416a-8126-b51c2d56a854.yml'
+
+  # Allow manual trigger 
+  workflow_dispatch:      
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions: 
+      id-token: write #This is required for requesting the OIDC JWT Token
+      contents: read #Required when GH token is used to authenticate with private repo
+
+    steps:
+      - name: Checkout to the branch
+        uses: actions/checkout@v2
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          client-id: ${{ secrets.CSGINCEUS2WAZUHMULITNODE_AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.CSGINCEUS2WAZUHMULITNODE_AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.CSGINCEUS2WAZUHMULITNODE_AZURE_SUBSCRIPTION_ID }}
+
+      - name: Build and push container image to registry
+        uses: azure/container-apps-deploy-action@v2
+        with:
+          appSourcePath: ${{ github.workspace }}build-docker-images/wazuh-manager 
+          registryUrl: csginceus2wazuh.azurecr.io
+          registryUsername: ${{ secrets.CSGINCEUS2WAZUHMULITNODE_REGISTRY_USERNAME }}
+          registryPassword: ${{ secrets.CSGINCEUS2WAZUHMULITNODE_REGISTRY_PASSWORD }}
+          containerAppName: csginc-eus2-wazuh-mulitnode
+          resourceGroup: csginc-eus2-wazuh-rg
+          imageToBuild: csginceus2wazuh.azurecr.io/csginc-eus2-wazuh-mulitnode:${{ github.sha }}
+          _buildArgumentsKey_: |
+            _buildArgumentsValues_
+
+
